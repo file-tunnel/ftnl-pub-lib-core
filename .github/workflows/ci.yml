@@ -1,0 +1,53 @@
+name: public-core-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-core-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust-and-package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          show-progress: false
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
+        with:
+          toolchain: 1.88.0
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run strict Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Run tests
+        run: cargo test --locked --all-targets
+      - name: Build release artifact
+        run: cargo build --locked --release
+      - name: Build documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --locked --no-deps
+      - name: Install pinned zed CLI
+        env:
+          ZED_ARCHIVE_SHA256: f87576bc289e43ed647902527e7be70566445d2f1fd11249f067ab35547d4b8a
+        run: |
+          curl --fail --location --silent --show-error \
+            --output /tmp/zed.tar.gz \
+            https://github.com/zed-pkg/zed-cli/releases/download/v0.3.0/zed-x86_64-unknown-linux-gnu.tar.gz
+          printf '%s  %s\n' "$ZED_ARCHIVE_SHA256" /tmp/zed.tar.gz | sha256sum --check --strict
+          tar -xzf /tmp/zed.tar.gz -C /tmp
+          /tmp/zed --version
+      - name: Validate package contract
+        run: /tmp/zed validate --json

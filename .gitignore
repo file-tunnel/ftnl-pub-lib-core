@@ -1,0 +1,9 @@
+/target/
+/.vendor/
+/.zed/
+/.zed-pack/
+/.direnv/
+/.env
+/.env.*
+*.log
+.DS_Store

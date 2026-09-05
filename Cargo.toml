@@ -1,0 +1,19 @@
+[package]
+name = "ftnl-pub-lib-core"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+description = "Frontend-safe runtime policy and configuration for File Tunnel clients"
+repository = "https://github.com/file-tunnel/ftnl-pub-lib-core"
+publish = false
+
+[dependencies]
+thiserror = "=2.0.16"
+url = "=2.5.7"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "deny"
