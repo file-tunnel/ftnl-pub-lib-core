@@ -235,6 +235,8 @@ fn is_loopback(url: &Url) -> bool {
     url.host_str().is_some_and(|host| {
         host.eq_ignore_ascii_case("localhost")
             || host
+                .trim_start_matches('[')
+                .trim_end_matches(']')
                 .parse::<IpAddr>()
                 .is_ok_and(|address| address.is_loopback())
     })
