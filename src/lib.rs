@@ -126,8 +126,7 @@ impl FrontendRuntimeConfig {
     /// Remote cleartext URLs remain rejected by `from_inputs`.
     #[must_use]
     pub fn uses_insecure_development_transport(&self) -> bool {
-        self.api_base.as_url().scheme() == "http"
-            || self.events_base.as_url().scheme() == "ws"
+        self.api_base.as_url().scheme() == "http" || self.events_base.as_url().scheme() == "ws"
     }
 
     #[must_use]
