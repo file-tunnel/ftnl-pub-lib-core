@@ -121,6 +121,14 @@ impl FrontendRuntimeConfig {
         self.access_mode
     }
 
+    /// Whether either endpoint uses the loopback-only cleartext development
+    /// exception. Hosts can surface a visible development-mode warning.
+    /// Remote cleartext URLs remain rejected by `from_inputs`.
+    #[must_use]
+    pub fn uses_insecure_development_transport(&self) -> bool {
+        self.api_base.as_url().scheme() == "http" || self.events_base.as_url().scheme() == "ws"
+    }
+
     #[must_use]
     pub const fn shared_auth_audience(&self) -> Option<&'static str> {
         if self.access_mode.requires_shared_auth() {
@@ -227,6 +235,8 @@ fn is_loopback(url: &Url) -> bool {
     url.host_str().is_some_and(|host| {
         host.eq_ignore_ascii_case("localhost")
             || host
+                .trim_start_matches('[')
+                .trim_end_matches(']')
                 .parse::<IpAddr>()
                 .is_ok_and(|address| address.is_loopback())
     })
@@ -378,6 +388,25 @@ mod tests {
         .expect("loopback config");
         assert_eq!(config.api_base().scheme(), "http");
         assert_eq!(config.events_base().scheme(), "ws");
+    }
+
+    #[test]
+    fn exposes_cleartext_loopback_development_status() {
+        let production = FrontendRuntimeConfig::from_inputs(inputs("individual", None))
+            .expect("production configuration");
+        assert!(!production.uses_insecure_development_transport());
+
+        for (api, events) in [
+            ("http://127.0.0.1:8080", "wss://events.file-tunnel.example"),
+            ("https://api.file-tunnel.example", "ws://localhost:8080"),
+            ("http://[::1]:8080", "ws://127.0.0.1:8080"),
+        ] {
+            let mut candidate = inputs("one_time", None);
+            candidate.api_base = api.into();
+            candidate.events_base = events.into();
+            let config = FrontendRuntimeConfig::from_inputs(candidate).unwrap();
+            assert!(config.uses_insecure_development_transport());
+        }
     }
 
     #[test]
